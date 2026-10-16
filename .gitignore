@@ -1,0 +1,19 @@
+# ── 개인정보: 절대 GitHub에 올리지 않는다 ──
+# 실제 캘린더 파일, 설정, 할 일, 변경 기록, 로그인 정보는 모두 private/ 안에 둔다.
+private/
+*.ics
+!samples/*.ics
+token*.json
+credentials*.json
+client_secret*.json
+.env
+*.key
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# 맥
+.DS_Store

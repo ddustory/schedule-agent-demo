@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 일정 비서</title>
+<style>
+  :root {
+    --bg: #fdf8ea; --card: #fffdf6; --ink: #4a3426; --sub: #8a7564; --line: #eadfc6;
+    --accent: #b84d6b; --accent-ink: #ffffff; --cheek: #f6c1cc; --today: #fbe3e8;
+    --warn: #8a5a00; --warn-bg: #fff1cc; --bad: #a1262b; --bad-bg: #fde8e8; --chip: #f5ecd6;
+    --c-수업: #cfe3f5; --c-약속: #f8d3dc; --c-대타: #fbe3a0; --c-도서: #d6ebc6;
+    --c-변동: #e8d8f5; --c-강의: #cdeee3; --c-기타: #ece5d6; --c-할일: #ffe8b8; --c-ink: #3d2b1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1a16; --card: #2a241e; --ink: #f3e9d8; --sub: #b8a68f; --line: #43392e;
+      --accent: #f2a0b5; --accent-ink: #2a1a1f; --cheek: #7a4452; --today: #3a2a2f;
+      --warn: #f0c36a; --warn-bg: #2f2716; --bad: #f09a9d; --bad-bg: #351d1f; --chip: #352d25;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  header { padding: 14px 16px 0; max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 17px; margin: 0; }
+  .sub { color: var(--sub); font-size: 13px; }
+  nav { display: flex; gap: 6px; overflow-x: auto; padding: 12px 16px; max-width: 980px; margin: 0 auto; scrollbar-width: none; }
+  nav button { flex: none; border: 1.5px solid var(--line); background: var(--card); color: var(--ink);
+               padding: 7px 14px; border-radius: 999px; font-size: 14px; cursor: pointer; }
+  nav button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { max-width: 980px; margin: 0 auto; padding: 0 16px 120px; }
+  section { display: none; } section.on { display: block; }
+  .card { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px; margin-bottom: 12px; }
+  .banner { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 10px 12px; margin: 8px 0 12px; font-size: 14px; }
+  .chips span { display: inline-block; background: var(--chip); border-radius: 999px; padding: 2px 10px; margin: 2px 4px 2px 0; font-size: 13px; }
+  .msg { white-space: pre-wrap; margin: 10px 0; }
+  .msg.me { text-align: right; }
+  .msg.me .bubble { background: var(--accent); color: var(--accent-ink); display: inline-block; border-radius: 16px 16px 4px 16px; padding: 8px 12px; text-align: left; }
+  .msg.bot { display: flex; gap: 8px; align-items: flex-start; }
+  .msg.bot .bubble { flex: 1; min-width: 0; background: var(--card); border: 1.5px solid var(--line); border-radius: 16px 16px 16px 4px; padding: 10px 12px; display: block; }
+  details { margin-top: 8px; font-size: 13px; color: var(--sub); }
+  details ol { padding-left: 18px; margin: 6px 0; }
+  details li { margin-bottom: 6px; }
+  code { font-size: 12px; word-break: break-all; }
+  .pending { border: 2px solid var(--accent); }
+  .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .spacer { flex: 1; }
+  button.main { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 9px 16px; font-size: 14px; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 13px; font-size: 14px; cursor: pointer; }
+  button.danger { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
+  input, select, textarea { font: inherit; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; }
+  label { display: block; font-size: 13px; color: var(--sub); margin: 10px 0 4px; }
+  .composer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); border-top: 1.5px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+  .composer form { max-width: 980px; margin: 0 auto; display: flex; gap: 8px; }
+  .composer input { flex: 1; border-radius: 999px; padding-left: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  th { color: var(--sub); font-weight: 500; font-size: 13px; }
+  th { white-space: nowrap; }
+  .nw { white-space: nowrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+  pre { white-space: pre-wrap; margin: 0; font: inherit; }
+  .bar { height: 10px; background: var(--cheek); border-radius: 5px; }
+
+  /* 캐릭터 스티커 */
+  .stk { border-radius: 50%; object-fit: cover; background: var(--chip); border: 2px solid var(--card);
+         box-shadow: 0 0 0 1.5px var(--line); flex: none; display: inline-block; vertical-align: middle; }
+  .stk-emoji { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+               background: var(--chip); flex: none; vertical-align: middle; }
+  .hero { display: flex; gap: 14px; align-items: center; }
+  .hero .say { font-size: 17px; font-weight: 600; }
+  .hero .say small { display: block; font-weight: 400; font-size: 13px; color: var(--sub); }
+  .wiggle { animation: wig 2.4s ease-in-out infinite; transform-origin: 50% 90%; }
+  @keyframes wig { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-6deg); } 20% { transform: rotate(5deg); } 30% { transform: rotate(0); } }
+  @media (prefers-reduced-motion: reduce) { .wiggle { animation: none; } }
+
+  /* 종류 색 */
+  .cat { display: inline-block; border-radius: 999px; padding: 0 8px; font-size: 12px; color: var(--c-ink); background: var(--c-기타); white-space: nowrap; }
+  .cat-수업 { background: var(--c-수업); } .cat-약속 { background: var(--c-약속); } .cat-대타 { background: var(--c-대타); }
+  .cat-도서 { background: var(--c-도서); } .cat-스케줄변동 { background: var(--c-변동); } .cat-할일 { background: var(--c-할일); }
+  .cat-대학강의 { background: var(--c-강의) !important; }
+
+  /* 일간 시간표 */
+  .tl { list-style: none; margin: 0; padding: 0; }
+  .tl li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .tl li:last-child { border-bottom: 0; }
+  .tl .time { width: 92px; flex: none; font-variant-numeric: tabular-nums; color: var(--sub); font-size: 13px; }
+  .tl .what { flex: 1; min-width: 0; }
+
+  /* 주간 */
+  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .wday { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 10px 8px; min-height: 180px; cursor: pointer; }
+  .wday.today { background: var(--today); border-color: var(--accent); }
+  .wday .head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .wday .dow { font-weight: 700; }
+  .wday .dnum { color: var(--sub); font-size: 12px; }
+  .wday.sun .dow { color: #d0546a; } .wday.sat .dow { color: #4f7fbf; }
+  .wit { font-size: 12.5px; line-height: 1.35; margin: 4px 0; padding: 4px 6px; border-radius: 8px; color: var(--c-ink); background: var(--c-기타); overflow-wrap: anywhere; }
+  .wit b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .wit.cat-수업 { background: var(--c-수업); } .wit.cat-약속 { background: var(--c-약속); } .wit.cat-대타 { background: var(--c-대타); }
+  .wit.cat-도서 { background: var(--c-도서); } .wit.cat-스케줄변동 { background: var(--c-변동); } .wit.cat-할일 { background: var(--c-할일); }
+  .empty { color: var(--sub); font-size: 12px; text-align: center; padding-top: 8px; }
+  @media (max-width: 760px) {
+    .week { grid-template-columns: 1fr; }
+    .wday { min-height: 0; display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: start; }
+    .wday .head { flex-direction: column; align-items: flex-start; gap: 4px; margin: 0; }
+  }
+
+  /* 월간 */
+  .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .mh { text-align: center; font-size: 12px; color: var(--sub); padding: 4px 0; }
+  .mh.sun { color: #d0546a; } .mh.sat { color: #4f7fbf; }
+  .mcell { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; min-height: 92px; padding: 5px; cursor: pointer; position: relative; overflow: hidden; }
+  .mcell.out { opacity: .38; }
+  .mcell.today { background: var(--today); border-color: var(--accent); }
+  .mcell .n { font-size: 12px; font-weight: 700; }
+  .mcell.sun .n { color: #d0546a; } .mcell.sat .n { color: #4f7fbf; }
+  .mcell .stk, .mcell .stk-emoji { position: absolute; top: 4px; right: 4px; }
+  .mi { font-size: 11px; line-height: 1.3; margin-top: 3px; padding: 1px 4px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c-ink); background: var(--c-기타); }
+  .mi.cat-수업 { background: var(--c-수업); } .mi.cat-약속 { background: var(--c-약속); } .mi.cat-대타 { background: var(--c-대타); }
+  .mi.cat-도서 { background: var(--c-도서); } .mi.cat-스케줄변동 { background: var(--c-변동); }
+  .more { font-size: 11px; color: var(--sub); margin-top: 2px; }
+  .dots { display: none; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-기타); border: 1px solid rgba(0,0,0,.12); }
+  .dot.cat-수업 { background: var(--c-수업); } .dot.cat-약속 { background: var(--c-약속); } .dot.cat-대타 { background: var(--c-대타); }
+  .dot.cat-도서 { background: var(--c-도서); } .dot.cat-스케줄변동 { background: var(--c-변동); }
+  @media (max-width: 600px) {
+    .mcell { min-height: 64px; padding: 4px; border-radius: 10px; }
+    .mi, .more { display: none; }
+    .dots { display: flex; }
+    .mcell .stk, .mcell .stk-emoji { position: static; display: block; margin: 3px auto 0; }
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+  /* 출석 */
+  .absbox { display: inline-flex; gap: 3px; vertical-align: middle; }
+  .absbox i { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--line); background: var(--card); }
+  .absbox i.on { background: var(--cheek); border-color: var(--accent); }
+  .absbox i.f { border-style: dashed; }
+  .st { display: inline-block; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 600; color: var(--c-ink); }
+  .st-안전 { background: var(--c-도서); } .st-주의 { background: var(--c-대타); } .st-위험, .st-F기준 { background: #f6b3b8; }
+
+  /* 스티커 설정 */
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+  .slot { border: 1.5px dashed var(--line); border-radius: 14px; padding: 10px; text-align: center; font-size: 13px; }
+  .slot label { margin: 6px 0 0; color: var(--ink); cursor: pointer; }
+  .slot input { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <span id="logo"></span>
+  <div><h1>내 일정 비서</h1><div class="sub" id="status">불러오는 중…</div></div>
+</header>
+<nav id="tabs">
+  <button data-t="chat" class="on">비서</button>
+  <button data-t="day">일간</button>
+  <button data-t="week">주간</button>
+  <button data-t="month">월간</button>
+  <button data-t="todo">할 일</button>
+  <button data-t="attend">출석</button>
+  <button data-t="analysis">내 패턴</button>
+  <button data-t="log">변경 기록</button>
+  <button data-t="settings">설정</button>
+</nav>
+<main>
+  <div id="demo-banner" class="banner" style="display:none"><b>공개 체험판</b>이에요. 화면의 일정은 모두 <b>가짜 예시</b>이고, 등록·되돌리기는 이 브라우저에서만 시험되며 실제 캘린더와 연결되지 않아요. 비서 탭에 <b>"다음 주 화요일 7시 친구랑 저녁"</b>, <b>"내일 계획 짜줘"</b>, <b>"내 패턴 분석해줘"</b>처럼 적어 보세요.</div>
+  <div id="ask-banner" class="banner" style="display:none">처음 질문에 아직 답하지 않았어요. 지금 알림·이동 시간 등은 <b>임시 기본값</b>이에요. <a href="#" onclick="show('settings');return false">설정에서 답하기 →</a></div>
+
+  <section id="chat" class="on">
+    <div class="card sub">
+      예) <span class="chips"><span>다음 주 화요일 7시 ○○랑 저녁</span><span>내일 계획 짜줘</span><span>내 패턴 분석해줘</span><span>할 일 정리</span></span><br>
+      캘린더는 <b>내가 '네'를 눌러야만</b> 바뀌어요. 비서가 어떤 도구를 왜 썼는지는 '과정 보기'에서 볼 수 있어요.
+    </div>
+    <div id="log"></div>
+  </section>
+
+  <section id="day">
+    <div class="card row">
+      <button class="ghost" onclick="moveDay(-1)" aria-label="전날">‹</button>
+      <button class="ghost" onclick="loadDay(TODAY)">오늘</button>
+      <button class="ghost" onclick="moveDay(1)" aria-label="다음날">›</button>
+      <input type="date" id="day-date" style="width:auto" onchange="loadDay(this.value)">
+    </div>
+    <div id="day-out"></div>
+  </section>
+
+  <section id="week">
+    <div class="card row">
+      <button class="ghost" onclick="moveWeek(-1)" aria-label="지난주">‹</button>
+      <h2 id="week-title"></h2>
+      <button class="ghost" onclick="moveWeek(1)" aria-label="다음 주">›</button>
+      <span class="spacer"></span>
+      <button class="ghost" onclick="WEEK0 = weekStart(TODAY); loadWeek()">이번 주</button>
+    </div>
+    <div id="week-hero"></div>
+    <div id="week-out" class="week"></div>
+  </section>
+
+  <section id="month">
+    <div class="card row">
+      <button class="ghost" onclick="moveMonth(-1)" aria-label="지난달">‹</button>
+      <h2 id="month-title"></h2>
+      <button class="ghost" onclick="moveMonth(1)" aria-label="다음 달">›</button>
+      <span class="spacer"></span>
+      <button class="ghost" onclick="MONTH0 = TODAY.slice(0, 7); loadMonth()">이번 달</button>
+    </div>
+    <div class="card">
+      <div id="month-out" class="month"></div>
+      <div class="legend" id="legend"></div>
+      <div class="sub" style="margin-top:6px">날짜를 누르면 그날의 일간 계획으로 가요.</div>
+    </div>
+  </section>
+
+  <section id="todo">
+    <div class="card">
+      <b>할 일 추가</b>
+      <div class="grid2">
+        <div><label>할 일</label><input id="td-title" placeholder="예: 과제 제출"></div>
+        <div><label>마감일 (없으면 비움)</label><input id="td-due" type="date"></div>
+        <div><label>중요도</label><select id="td-imp"><option value="3">높음</option><option value="2" selected>보통</option><option value="1">낮음</option></select></div>
+        <div><label>걸리는 시간(분)</label><input id="td-min" type="number" value="30" min="5" step="5"></div>
+        <div><label>반복</label><select id="td-rep" onchange="$('td-wd-box').style.display = this.value ? '' : 'none'"><option value="">한 번만</option><option value="weekly">매주</option></select></div>
+        <div id="td-wd-box" style="display:none"><label>매주 무슨 요일까지?</label><select id="td-wd">
+          <option value="6">일</option><option value="0">월</option><option value="1">화</option><option value="2">수</option><option value="3">목</option><option value="4">금</option><option value="5" selected>토</option></select></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="main" onclick="addTodo()">추가</button></div>
+    </div>
+    <div id="todo-out"></div>
+  </section>
+
+  <section id="attend">
+    <div id="attend-out"></div>
+    <div class="card sub">결석한 날은 <b>구글 캘린더에서 그날 강의 제목 앞에 '결석'</b>을 붙여 주세요. (예: 결석국어음운론) 비서가 그걸 세요.
+      강의가 '대학 강의'로 안 잡히면 설정 → 일정 종류 정하기에서 골라 주세요.</div>
+  </section>
+
+  <section id="analysis"><div id="analysis-out"></div></section>
+
+  <section id="log">
+    <div class="card">
+      <b>비서가 추가한 일정</b>
+      <div class="sub">구글 캘린더에 옮기려면 <a href="#" onclick="dl();return false">이 파일(.ics)</a>을 받아 구글 캘린더 → 설정 → 가져오기로 넣으세요. (직접 연결은 다음 단계)</div>
+      <div id="added-out"></div>
+    </div>
+    <div class="card"><b>변경 기록</b> <span class="sub">무엇을·언제·어떻게 바꿨는지. '되돌리기'로 취소할 수 있어요.</span><div id="log-out"></div></div>
+  </section>
+
+  <section id="settings">
+    <div class="card">
+      <b>캐릭터 꾸미기</b>
+      <div class="sub">좋아하는 캐릭터 그림을 자리마다 넣으면 일간·주간·월간 화면이 꾸며져요. 그림은 이 맥의 <code>private/stickers/</code>에만 저장되고 GitHub에는 올라가지 않아요. 둥글게 잘려서 보여요.</div>
+      <div class="slots" id="slots"></div>
+    </div>
+    <div class="card">
+      <b>일정 종류 정하기</b>
+      <div class="sub">내 캘린더에 나온 제목마다 종류를 골라 주세요. 한 번 정하면 그 제목은 계속 그 종류로 봐요. '자동'은 제목 속 단어로 짐작한 결과예요.</div>
+      <div id="titles-out" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px"><button class="main" onclick="saveTitles()">종류 저장</button><span id="t-out" class="sub"></span></div>
+    </div>
+    <div class="card">
+      <b>내 캘린더 불러오기</b>
+      <div class="sub">구글 캘린더(컴퓨터 웹) → 설정 → 가져오기/내보내기 → 내보내기 → 받은 zip을 풀면 나오는 .ics 파일을 여기에 넣어 주세요. 파일은 이 맥의 <code>private/</code> 폴더에만 저장되고 GitHub에는 올라가지 않아요.</div>
+      <input type="file" id="ics" accept=".ics" multiple style="margin-top:8px">
+      <div id="ics-out" class="sub"></div>
+    </div>
+    <div class="card">
+      <b>처음 질문</b> <span class="sub">생활 방식은 비서가 짐작하지 않고 여기 답을 따라요.</span>
+      <div class="grid2">
+        <div><label>도서관 대출 기간은 며칠인가요?</label><input id="s-loan" type="number" min="1"></div>
+        <div><label>학원 수업 고정 요일·시간은? (예: 화·목 18:00~21:00)</label><input id="s-class"></div>
+        <div><label>알림 – 수업 (몇 분 전)</label><input id="s-r-수업" placeholder="예: 60"></div>
+        <div><label>알림 – 대학 강의 (몇 분 전)</label><input id="s-r-대학 강의"></div>
+        <div><label>알림 – 약속 (몇 분 전, 출발 알림은 자동 추가)</label><input id="s-r-약속"></div>
+        <div><label>알림 – 대타 (몇 분 전)</label><input id="s-r-대타"></div>
+        <div><label>알림 – 도서 반납 (1440 = 하루 전)</label><input id="s-r-도서"></div>
+        <div><label>대타 요청은 어떤 기준으로 받나요?</label><input id="s-sub" placeholder="예: 수업 없는 날만"></div>
+        <div><label>이동 시간은 보통 몇 분 잡나요?</label><input id="s-travel" type="number" min="0" step="5"></div>
+        <div><label>하루 계획은 몇 시에 받고 싶나요?</label><input id="s-plan" type="time"></div>
+        <div><label>대학 강의 결석 몇 번이면 F인가요?</label><input id="s-fail" type="number" min="1"></div>
+        <div><label>이번 학기 시작일 (비우면 3/1·9/1로 계산)</label><input id="s-sem" type="date"></div>
+        <div><label>주간·월간 화면에서 한 주의 시작 요일</label><select id="s-ws"><option>월</option><option>일</option></select></div>
+        <div><label>계획을 세울 하루 시작 / 끝</label><div class="row"><input id="s-ds" type="time" style="flex:1"><input id="s-de" type="time" style="flex:1"></div></div>
+      </div>
+      <div class="sub" style="margin-top:8px">알림은 쉼표로 여러 개: 예) 1440, 60</div>
+      <label>비서 두뇌</label>
+      <select id="s-backend">
+        <option value="auto">자동 (로컬 AI가 켜져 있으면 사용, 아니면 규칙)</option>
+        <option value="rule">규칙 기반 (AI 없음, 항상 동작)</option>
+        <option value="ollama">로컬 AI – Ollama (일정이 밖으로 안 나감)</option>
+        <option value="claude">Claude API (일정 내용이 인터넷으로 전송됨)</option>
+      </select>
+      <div class="row" style="margin-top:12px"><button class="main" onclick="saveSettings()">저장</button><span id="s-out" class="sub"></span></div>
+    </div>
+  </section>
+</main>
+
+<div class="composer" id="composer">
+  <form onsubmit="send(event)">
+    <input id="msg" placeholder="비서에게 말하기… 예) 모레 오후 3시 치과" autocomplete="off">
+    <button class="main">보내기</button>
+  </form>
+</div>
+
+<script>
+const KEY = new URLSearchParams(location.search).get('key') || '';
+const H = KEY ? {'X-Key': KEY} : {};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(path, body) {
+  const opt = body === undefined ? {headers: H} : {method: 'POST', headers: {...H, 'Content-Type': 'application/json'}, body: JSON.stringify(body)};
+  const r = await fetch(path, opt);
+  const j = await r.json();
+  if (!r.ok) throw Object.assign(new Error(j.error || '오류'), {data: j});
+  return j;
+}
+let TODAY = null, SETTINGS = null;
+
+// ── 날짜 도우미 (브라우저 시간대와 무관하게 YYYY-MM-DD 문자열로만 계산) ──
+const DOW = ['월', '화', '수', '목', '금', '토', '일'];
+function toD(s) { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); }
+function fromD(d) { return d.toISOString().slice(0, 10); }
+function addDays(s, n) { const d = toD(s); d.setUTCDate(d.getUTCDate() + n); return fromD(d); }
+function dowIdx(s) { return (toD(s).getUTCDay() + 6) % 7; }  // 월=0 … 일=6
+function mondayOf(s) { return addDays(s, -dowIdx(s)); }
+const WS = () => (SETTINGS?.week_start === '일' ? 6 : 0);          // 한 주 시작 요일 (월=0 … 일=6)
+function weekStart(s) { return addDays(s, -((dowIdx(s) - WS() + 7) % 7)); }
+const dowAt = (i) => (WS() + i) % 7;                                 // 화면 i번째 칸의 요일
+function md(s) { return `${+s.slice(5, 7)}/${+s.slice(8, 10)}`; }
+const catCls = (c) => 'cat-' + String(c || '기타').replace(/\s/g, '');
+
+// ── 캐릭터 스티커 ──
+let HAVE = new Set(), STK_V = 0;
+const FALLBACK = {study: '📖', fork: '🍴', munch: '😋', peek: '👀', run: '🏃'};
+const CAT_SLOT = {'대학 강의': 'study', '수업': 'study', '도서': 'study', '할 일': 'study', '약속': 'fork', '대타': 'run', '스케줄 변동': 'peek', '기타': 'munch'};
+function stk(slot, size = 32, cls = '') {
+  if (HAVE.has(slot)) return `<img class="stk ${cls}" src="/stickers/${slot}?v=${STK_V}${KEY ? '&key=' + KEY : ''}" width="${size}" height="${size}" alt="">`;
+  return `<span class="stk-emoji ${cls}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .55)}px">${FALLBACK[slot]}</span>`;
+}
+function moodOf(items, busyMin) {
+  const busyLimit = (SETTINGS?.busy_hours_warning || 9) * 60 * 0.6;
+  const cats = new Set(items.map(i => i.category));
+  if (busyMin > busyLimit) return {slot: 'run', say: '오늘은 바쁜 날! 힘내자', small: '틈틈이 쉬는 것도 잊지 말기'};
+  if (cats.has('대타')) return {slot: 'run', say: '대타 있는 날, 영차영차', small: '이동 시간 넉넉히!'};
+  if (cats.has('약속')) return {slot: 'fork', say: '약속 있는 날이야!', small: '출발 알림 챙겨 둘게'};
+  if (cats.has('수업') || cats.has('대학 강의') || cats.has('도서')) return {slot: 'study', say: '열심히 하는 날', small: '수업 전에 준비물 체크'};
+  if (cats.has('스케줄 변동')) return {slot: 'peek', say: '스케줄이 바뀌었대', small: '변동 내용 확인하기'};
+  if (!items.length) return {slot: 'peek', say: '일정이 없는 날', small: '하고 싶은 걸 해도 돼'};
+  return {slot: 'munch', say: '여유로운 하루', small: '맛있는 거 먹기'};
+}
+
+function show(t) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === t));
+  $('composer').style.display = t === 'chat' ? '' : 'none';
+  ({day: () => loadDay($('day-date').value || TODAY), week: loadWeek, month: loadMonth, todo: loadTodos, attend: loadAttend,
+    analysis: loadAnalysis, log: loadLog, settings: loadSettings})[t]?.();
+}
+$('tabs').onclick = (e) => { if (e.target.dataset.t) show(e.target.dataset.t); };
+
+async function loadStickers() {
+  const s = await api('/api/stickers');
+  HAVE = new Set(s.have);
+  $('logo').innerHTML = stk('munch', 44, 'wiggle');
+  return s;
+}
+async function status() {
+  const [s, st] = await Promise.all([api('/api/status'), api('/api/settings')]);
+  TODAY = s.today; SETTINGS = st;
+  WEEK0 = WEEK0 ? weekStart(WEEK0) : weekStart(TODAY); MONTH0 = MONTH0 || TODAY.slice(0, 7);
+  const brain = {rule: '규칙 기반', ollama: '로컬 AI', claude: 'Claude API'}[s.backend] || s.backend;
+  $('status').textContent = `${s.today} · ${s.demo ? '체험 모드 (가짜 예시 일정)' : '내 캘린더 ' + s.events + '개 일정'} · 두뇌: ${brain}`;
+  $('ask-banner').style.display = s.answered ? 'none' : '';
+  $('demo-banner').style.display = s.public_demo ? '' : 'none';
+}
+
+// ── 비서 ──
+function addMsg(who, html) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + who;
+  d.innerHTML = (who === 'bot' ? stk('munch', 34) : '') + `<span class="bubble">${html}</span>`;
+  $('log').appendChild(d);
+  d.scrollIntoView({behavior: 'smooth', block: 'end'});
+  return d;
+}
+function stepsHtml(steps) {
+  if (!steps?.length) return '';
+  return `<details><summary>과정 보기 (도구 ${steps.length}번 사용)</summary><ol>` +
+    steps.map(s => `<li><b>${esc(s.tool)}</b> — ${esc(s.why)}<br><code>입력 ${esc(JSON.stringify(s.input))}</code><br><code>결과 ${esc(s.output)}</code></li>`).join('') +
+    '</ol></details>';
+}
+function pendingHtml(p) {
+  const a = p.after || p.before || {};
+  const when = a.all_day ? a.start?.slice(0, 10) + ' 종일' : `${a.start?.slice(0, 10)} ${a.start?.slice(11, 16)}~${a.end?.slice(11, 16)}`;
+  const verb = {add: '등록', update: '수정', delete: '삭제'}[p.action];
+  const warn = (p.warnings || []).map(w => `<div class="${w.startsWith('⛔') ? 'bad' : 'warn'}">${esc(w)}</div>`).join('');
+  return `<div class="card pending" id="p-${p.id}"><div class="row">${stk(CAT_SLOT[a.category] || 'munch', 36)}<b>${verb} 확인</b></div>
+    <div>${esc(when)} · <span class="cat ${catCls(a.category)}">${esc(a.category)}</span> ${esc(a.title)}${a.location ? ' · ' + esc(a.location) : ''}</div>${warn}
+    <div class="row" style="margin-top:8px">
+      <button class="${p.action === 'delete' ? 'danger' : 'main'}" onclick="applyChange('${p.id}','${p.action}')">네, ${verb}</button>
+      <button class="ghost" onclick="cancelChange('${p.id}')">아니요</button></div></div>`;
+}
+async function send(e) {
+  e.preventDefault();
+  const m = $('msg').value.trim(); if (!m) return;
+  $('msg').value = '';
+  addMsg('me', esc(m));
+  const wait = addMsg('bot', '생각하는 중…');
+  try {
+    const r = await api('/api/chat', {message: m});
+    wait.querySelector('.bubble').innerHTML = esc(r.reply) + stepsHtml(r.steps) + (r.pending || []).map(pendingHtml).join('');
+  } catch (err) { wait.querySelector('.bubble').textContent = '오류: ' + err.message; }
+}
+async function applyChange(id, action) {
+  let confirm2 = '';
+  if (action === 'delete') {
+    confirm2 = prompt("삭제는 되돌리기 전까지 일정이 사라져요.\n정말 삭제하려면 '삭제'라고 입력하세요.") || '';
+    if (confirm2.trim() !== '삭제') return alert('삭제하지 않았어요.');
+  }
+  try {
+    await api('/api/apply', {id, confirm: '네', confirm2});
+    $('p-' + id).innerHTML = `<div class="row">${stk('fork', 36)}<b>완료했어요!</b> <span class="sub">변경 기록에 남았고, 언제든 되돌릴 수 있어요.</span></div>`;
+  } catch (err) { alert(err.message); }
+}
+async function cancelChange(id) {
+  await api('/api/cancel', {id});
+  $('p-' + id).innerHTML = '<span class="sub">취소했어요. 아무것도 바뀌지 않았어요.</span>';
+}
+
+// ── 일간 ──
+function moveDay(n) { loadDay(addDays($('day-date').value || TODAY, n)); }
+async function loadDay(d) {
+  $('day-date').value = d;
+  const [p, rg] = await Promise.all([api('/api/plan?date=' + d), api(`/api/range?from=${d}&to=${d}`)]);
+  const day = rg.days[0];
+  const mood = moodOf(day.items, day.busy_min);
+  const free = p.free_slots.reduce((a, s) => a + s.minutes, 0);
+  $('day-out').innerHTML = `
+    <div class="card hero">${stk(mood.slot, 92, 'wiggle')}
+      <div><div class="sub">${esc(p.date_text)}${d === TODAY ? ' · 오늘' : ''}</div>
+      <div class="say">${esc(mood.say)}<small>${esc(mood.small)}</small></div>
+      <div class="chips" style="margin-top:6px"><span>일정 ${day.items.length}개</span><span>빈 시간 ${Math.floor(free / 60)}시간 ${free % 60}분</span></div></div></div>
+    ${p.warnings.length ? `<div class="card">${p.warnings.map(w => `<div class="${w.startsWith('⛔') ? 'bad' : 'warn'}">${esc(w)}</div>`).join('')}</div>` : ''}
+    ${p.attendance.length ? `<div class="card"><div class="row">${stk('study', 30)}<b>출석 체크</b><span class="spacer"></span>${notiBtn()}</div>
+      ${p.attendance.map(a => `<div style="margin-top:6px">${a.start} ${esc(a.course)} ${absBox(a.absent, a.limit)} 결석 ${a.absent}/${a.limit} <span class="st st-${a.status.replace(/\s/g, '')}">${esc(a.status)}</span>${a.skipped ? ' <span class="sub">(이날 결석)</span>' : ''}</div>`).join('')}</div>` : ''}
+    <div class="card"><b>시간표</b><ul class="tl" style="margin-top:4px">` +
+    (p.timeline.length ? p.timeline.map(x => `<li><span class="time">${esc(x.start)}${x.end ? '~' + esc(x.end) : ''}</span>
+      ${stk(CAT_SLOT[x.category] || 'munch', 30)}
+      <span class="what"><span class="cat ${catCls(x.category)}">${esc(x.category)}</span> ${esc(x.title)}${x.d_day ? ` <span class="sub">${esc(x.d_day)}</span>` : ''}</span></li>`).join('')
+      : `<li><span class="what sub">잡힌 일정도, 넣을 할 일도 없어요.</span></li>`) +
+    `</ul></div>
+    <div class="card"><div class="row">${stk('munch', 30)}<b>빈 시간</b></div><div class="chips" style="margin-top:6px">${p.free_slots.map(s => `<span>${s.start}~${s.end} (${s.minutes}분)</span>`).join('') || '없음'}</div>
+    ${p.unplaced_todos.length ? `<div class="sub" style="margin-top:6px">못 넣은 할 일: ${p.unplaced_todos.map(t => esc(t.title) + '(' + esc(t.d_day) + ')').join(', ')}</div>` : ''}</div>
+    <div class="card"><b>아침 요약</b> <span class="sub">(복사해서 메모·카톡에 붙여 넣기 좋게)</span><pre style="margin-top:6px">${esc(p.summary)}</pre></div>`;
+}
+
+// ── 주간 ──
+let WEEK0 = null;
+function moveWeek(n) { WEEK0 = addDays(WEEK0, 7 * n); loadWeek(); }
+function itemLine(i, cls) {
+  return `<div class="${cls} ${catCls(i.category)}">${i.all_day ? '' : `<b>${i.start}</b> `}${esc(i.title)}</div>`;
+}
+async function loadWeek() {
+  const end = addDays(WEEK0, 6);
+  $('week-title').textContent = `${md(WEEK0)} ~ ${md(end)}`;
+  const r = await api(`/api/range?from=${WEEK0}&to=${end}`);
+  const counts = {};
+  r.days.forEach(d => d.items.forEach(i => counts[i.category] = (counts[i.category] || 0) + 1));
+  const busiest = r.days.reduce((a, b) => b.busy_min > a.busy_min ? b : a);
+  const total = r.days.reduce((a, d) => a + d.items.length, 0);
+  $('week-hero').innerHTML = `<div class="card hero">${stk(total > 12 ? 'run' : total ? 'study' : 'peek', 72, 'wiggle')}
+    <div><div class="say">${WEEK0 === weekStart(TODAY) ? '이번 주' : '이 주'} 일정 ${total}개<small>${busiest.busy_min ? `가장 바쁜 날은 ${DOW[dowIdx(busiest.date)]}요일(${md(busiest.date)}) · 약 ${Math.round(busiest.busy_min / 6) / 10}시간` : '한가한 한 주예요'}</small></div>
+    <div class="legend" style="margin-top:6px">${Object.entries(counts).map(([k, v]) => `<span class="cat ${catCls(k)}">${esc(k)} ${v}</span>`).join('')}</div></div></div>`;
+  $('week-out').innerHTML = r.days.map((d, i) => {
+    const mood = moodOf(d.items, d.busy_min);
+    const k = dowAt(i);
+    const cls = ['wday', d.date === TODAY ? 'today' : '', k === 5 ? 'sat' : '', k === 6 ? 'sun' : ''].join(' ');
+    return `<div class="${cls}" onclick="openDay('${d.date}')">
+      <div class="head">${stk(mood.slot, 34)}<div><div class="dow">${DOW[k]}</div><div class="dnum">${md(d.date)}</div></div></div>
+      <div>${d.items.map(x => itemLine(x, 'wit')).join('')}${d.todos.map(t => `<div class="wit cat-할일">📌 ${esc(t)}</div>`).join('')}
+      ${!d.items.length && !d.todos.length ? '<div class="empty">비어 있어요</div>' : ''}</div></div>`;
+  }).join('');
+}
+function openDay(d) { $('day-date').value = d; show('day'); }
+
+// ── 월간 ──
+let MONTH0 = null;
+function moveMonth(n) {
+  let [y, m] = MONTH0.split('-').map(Number); m += n;
+  if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
+  MONTH0 = `${y}-${String(m).padStart(2, '0')}`; loadMonth();
+}
+async function loadMonth() {
+  const first = MONTH0 + '-01';
+  const [y, m] = MONTH0.split('-').map(Number);
+  const last = fromD(new Date(Date.UTC(y, m, 0)));
+  const start = weekStart(first), end = addDays(weekStart(last), 6);
+  $('month-title').textContent = `${y}년 ${m}월`;
+  const r = await api(`/api/range?from=${start}&to=${end}`);
+  $('month-out').innerHTML = DOW.map((_, i) => { const k = dowAt(i); return `<div class="mh ${k === 5 ? 'sat' : k === 6 ? 'sun' : ''}">${DOW[k]}</div>`; }).join('') +
+    r.days.map((d, i) => {
+      const k = dowAt(i % 7), mood = moodOf(d.items, d.busy_min);
+      const cls = ['mcell', d.date.slice(0, 7) !== MONTH0 ? 'out' : '', d.date === TODAY ? 'today' : '', k === 5 ? 'sat' : '', k === 6 ? 'sun' : ''].join(' ');
+      const shown = d.items.slice(0, 2);
+      return `<div class="${cls}" onclick="openDay('${d.date}')"><div class="n">${+d.date.slice(8)}</div>
+        ${d.items.length ? stk(mood.slot, 24) : ''}
+        ${shown.map(x => itemLine(x, 'mi')).join('')}${d.items.length > 2 ? `<div class="more">+${d.items.length - 2}개</div>` : ''}
+        <div class="dots">${d.items.slice(0, 4).map(x => `<span class="dot ${catCls(x.category)}"></span>`).join('')}</div></div>`;
+    }).join('');
+  $('legend').innerHTML = ['수업', '대학 강의', '약속', '대타', '도서', '스케줄 변동', '기타'].map(c => `<span class="cat ${catCls(c)}">${c}</span>`).join('');
+}
+
+// ── 할 일 ──
+let TODOS = [];
+async function loadTodos() {
+  const r = await api('/api/todos'); TODOS = r.todos;
+  $('todo-out').innerHTML = `<div class="card"><div class="row">${stk('study', 34)}<b>마감순 · 중요도순</b></div><table><tr><th>마감</th><th>할 일</th><th>중요</th><th>시간</th><th></th></tr>` +
+    r.sorted.map(t => `<tr><td>${esc(t.d_day)}${t.due ? `<div class="sub">${md(t.due)}</div>` : ''}</td><td>${esc(t.title)}${t.repeat_label ? ` <span class="cat cat-할일">🔁 ${esc(t.repeat_label)}</span>` : ''}</td><td class="nw">${['', '낮음', '보통', '높음'][t.importance || 2]}</td><td class="nw">${t.minutes || 30}분</td>
+      <td><button class="ghost" onclick="doneTodo('${t.id}', '${t.repeat ? t.due : ''}')">완료</button>${t.repeat ? ` <button class="ghost" onclick="stopRepeat('${t.id}')" title="반복 그만">그만</button>` : ''}</td></tr>`).join('') + '</table></div>';
+}
+async function addTodo() {
+  const title = $('td-title').value.trim(); if (!title) return;
+  const t = {id: 't' + Date.now(), title, due: $('td-due').value || null, importance: +$('td-imp').value, minutes: +$('td-min').value || 30};
+  if ($('td-rep').value === 'weekly') Object.assign(t, {due: null, repeat: 'weekly', weekday: +$('td-wd').value, since: TODAY, done_dates: []});
+  TODOS.push(t);
+  await api('/api/todos', {todos: TODOS}); $('td-title').value = ''; loadTodos();
+}
+async function doneTodo(id, due) {
+  // 매주 할 일은 '이번 회차'만 완료로, 한 번만 할 일은 완료로
+  TODOS = TODOS.map(t => t.id !== id ? t : (due ? {...t, done_dates: [...(t.done_dates || []), due]} : {...t, done: true}));
+  await api('/api/todos', {todos: TODOS}); loadTodos();
+}
+async function stopRepeat(id) {
+  if (!confirm('이 매주 할 일을 그만할까요? (목록에서 빠져요)')) return;
+  TODOS = TODOS.map(t => t.id === id ? {...t, repeat: null, done: true} : t);
+  await api('/api/todos', {todos: TODOS}); loadTodos();
+}
+
+// ── 출석 ──
+function absBox(n, limit) {
+  return `<span class="absbox" aria-label="결석 ${n}/${limit}">${Array.from({length: limit}, (_, i) => `<i class="${i < n ? 'on' : ''} ${i === limit - 1 ? 'f' : ''}"></i>`).join('')}</span>`;
+}
+async function loadAttend() {
+  const r = await api('/api/attendance');
+  const worst = r.courses.find(c => c.status !== '안전');
+  $('attend-out').innerHTML = `<div class="card hero">${stk(worst ? 'run' : 'study', 76, 'wiggle')}
+    <div><div class="say">${worst ? '출석 챙길 강의가 있어요!' : '출석 잘하고 있어요'}<small>이번 학기 ${md(r.semester[0])} ~ · 결석 ${r.limit}번이면 F (네모 마지막 칸 = F)</small></div>
+    <div class="row" style="margin-top:6px">${notiBtn()}</div></div></div>
+    <div class="card"><b>강의별 출석</b>` + (r.courses.length ? `<table><tr><th>강의</th><th>결석</th><th>상태</th></tr>` + r.courses.map(c =>
+      `<tr><td>${esc(c.course)}<div class="sub">지금까지 ${c.held}번${c.next ? ` · 다음 ${md(c.next.slice(0, 10))} ${c.next.slice(11, 16)}` : ''}</div></td>
+       <td>${absBox(c.absent, c.limit)} <b>${c.absent}</b>/${c.limit}${c.absent_dates.length ? `<div class="sub">${c.absent_dates.map(md).join(', ')}</div>` : ''}</td>
+       <td><span class="st st-${c.status.replace(/\s/g, '')}">${esc(c.status)}</span><div class="sub">${esc(c.message.split('— ')[1] || c.message)}</div></td></tr>`).join('') + '</table>'
+      : '<div class="sub">이번 학기 대학 강의가 아직 없어요.</div>') + '</div>';
+}
+
+// ── 맥 알림 (이 화면이 열려 있는 동안) ──
+const LS = {get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+            set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }};
+function notiOn() { return 'Notification' in window && Notification.permission === 'granted' && LS.get('noti') === '1'; }
+function notiBtn() {
+  if (!('Notification' in window)) return '<span class="sub">이 브라우저는 알림을 지원하지 않아요.</span>';
+  return notiOn() ? `<span class="chips"><span>🔔 알림 켜짐 (이 화면이 열려 있을 때)</span></span> <button class="ghost" onclick="LS.set('noti','0'); show(currentTab())">끄기</button>`
+                  : `<button class="main" onclick="enableNoti()">🔔 출석·일정 알림 켜기</button>`;
+}
+function currentTab() { return document.querySelector('nav button.on')?.dataset.t || 'chat'; }
+async function enableNoti() {
+  const p = await Notification.requestPermission();
+  if (p !== 'granted') return alert('알림이 허용되지 않았어요. 브라우저 설정에서 이 주소의 알림을 허용해 주세요.');
+  LS.set('noti', '1'); scheduleNoti(); show(currentTab());
+  new Notification('알림을 켰어요', {body: '강의 전 출석 알림과 일정 알림을 여기로 보내 드릴게요.'});
+}
+const TIMERS = {};
+async function scheduleNoti() {
+  if (!notiOn()) return;
+  let fired = {}; try { fired = JSON.parse(LS.get('fired') || '{}'); } catch {}
+  const r = await api('/api/reminders?date=' + TODAY);
+  const now = Date.now();
+  for (const x of r.reminders) {
+    const ms = new Date(x.at).getTime() - now;
+    if (fired[x.id] || TIMERS[x.id] || ms < -60000 || ms > 864e5) continue;
+    TIMERS[x.id] = setTimeout(() => {
+      if (!notiOn()) return;
+      new Notification(x.title, {body: x.body, icon: HAVE.has(x.kind === '출석' ? 'study' : 'munch') ? `/stickers/${x.kind === '출석' ? 'study' : 'munch'}${KEY ? '?key=' + KEY : ''}` : undefined});
+      fired[x.id] = 1; LS.set('fired', JSON.stringify(fired));
+    }, Math.max(0, ms));
+  }
+}
+setInterval(scheduleNoti, 30 * 60 * 1000);
+
+// ── 패턴 ──
+async function loadAnalysis() {
+  const a = await api('/api/analysis');
+  const max = Math.max(1, ...Object.values(a.by_category));
+  const pat = a.patterns;
+  let html = `<div class="card hero">${stk('study', 64)}<div><div class="say">${a.period.from} ~ ${a.period.to}<small>일정 ${a.total}개를 살펴봤어요</small></div></div></div>
+    <div class="card"><b>제안</b> <span class="sub">(제안일 뿐, 고정 일정은 바꾸지 않아요)</span><ul>${a.suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
+    <div class="card"><b>종류별 개수</b><table>${Object.entries(a.by_category).map(([k, v]) =>
+      `<tr><td style="width:100px"><span class="cat ${catCls(k)}">${k}</span></td><td><div class="bar" style="width:${v / max * 100}%"></div></td><td style="width:40px">${v}</td></tr>`).join('')}</table></div>`;
+  for (const c of ['수업', '대학 강의']) if (pat[c]) html += `<div class="card"><b>${c === '수업' ? '학원 수업' : '대학 강의'} 시간대</b><table><tr><th>요일</th><th>시간</th><th>횟수</th><th>주당</th></tr>${pat[c].top_slots.map(t => `<tr><td>${t.weekday}</td><td>${t.start}~${t.end}</td><td>${t.count}</td><td>${t.per_week}</td></tr>`).join('')}</table></div>`;
+  if (pat['대타']) html += `<div class="card"><b>대타</b> 월 평균 ${pat['대타'].per_month_avg}번<div class="chips">${Object.entries(pat['대타'].weekday_counts).map(([k, v]) => `<span>${k}요일 ${v}</span>`).join('')}</div></div>`;
+  if (pat['도서']?.avg_days) html += `<div class="card"><b>도서</b> 대출→반납 평균 ${pat['도서'].avg_days}일 (중간값 ${pat['도서'].median_days}일, ${pat['도서'].pairs}권)</div>`;
+  if (pat['스케줄 변동']) html += `<div class="card"><b>스케줄 변동</b><div class="chips">${Object.entries(pat['스케줄 변동'].per_month).map(([k, v]) => `<span>${k}: ${v}</span>`).join('')}</div><div class="chips">${Object.entries(pat['스케줄 변동'].part_of_month).map(([k, v]) => `<span>${k} ${v}</span>`).join('')}</div></div>`;
+  if (pat['요일별 평균 일정 시간']) html += `<div class="card"><b>요일별 평균 일정 시간</b><div class="chips">${Object.entries(pat['요일별 평균 일정 시간']).map(([k, v]) => `<span>${k} ${v}시간</span>`).join('')}</div></div>`;
+  html += `<div class="card"><b>최근 일정 예시</b> <span class="sub">(다른 사람 이름은 ○○로 가림)</span><table>${a.recent_examples.map(e => `<tr><td>${e.date}</td><td><span class="cat ${catCls(e.category)}">${e.category}</span></td><td>${esc(e.title)}</td></tr>`).join('')}</table></div>`;
+  $('analysis-out').innerHTML = html;
+}
+
+// ── 기록 ──
+async function loadLog() {
+  const [l, ad] = await Promise.all([api('/api/log'), api('/api/added')]);
+  $('added-out').innerHTML = ad.events.length ? '<table>' + ad.events.map(e =>
+    `<tr><td>${e.start.slice(0, 16).replace('T', ' ')}</td><td><span class="cat ${catCls(e.category)}">${esc(e.category)}</span> ${esc(e.title)}</td><td><button class="danger" onclick="askDelete('${e.uid}')">삭제</button></td></tr>`).join('') + '</table><div id="del-out"></div>'
+    : '<div class="sub">아직 없어요.</div>';
+  const verb = {add: '등록', update: '수정', delete: '삭제', undo: '되돌림'};
+  $('log-out').innerHTML = l.log.length ? '<table><tr><th>언제</th><th>무엇을</th><th>내용</th><th></th></tr>' + l.log.map(r => {
+    const ev = r.after || r.before || {};
+    const can = r.action !== 'undo' && !r.undone;
+    return `<tr><td>${r.time.slice(5, 16).replace('T', ' ')}</td><td>${verb[r.action]}${r.undone ? ' <span class="sub">(되돌림)</span>' : ''}</td>
+      <td>${esc(ev.title || '')} <span class="sub">${(ev.start || '').slice(0, 16).replace('T', ' ')}</span></td>
+      <td>${can ? `<button class="ghost" onclick="undo('${r.log_id}')">되돌리기</button>` : ''}</td></tr>`;
+  }).join('') + '</table>' : '<div class="sub">아직 바뀐 것이 없어요.</div>';
+}
+async function askDelete(uid) {
+  const r = await api('/api/propose_delete', {uid});
+  $('del-out').innerHTML = pendingHtml(r.pending);
+}
+async function undo(id) {
+  if (!confirm('이 변경을 되돌릴까요?')) return;
+  try { await api('/api/undo', {log_id: id}); loadLog(); } catch (e) { alert(e.message); }
+}
+function dl() { location.href = '/api/export' + (KEY ? '?key=' + KEY : ''); }
+
+// ── 설정 ──
+const CATS = ['수업', '대학 강의', '약속', '대타', '도서'];
+async function loadSettings() {
+  const [s, sk] = await Promise.all([api('/api/settings'), loadStickers()]);
+  $('slots').innerHTML = Object.entries(sk.slots).map(([slot, desc]) => `<div class="slot">${stk(slot, 72)}
+    <div style="margin-top:6px">${esc(desc)}</div>
+    <label><input type="file" accept="image/*" onchange="upSticker('${slot}', this)"><span class="ghost" style="display:inline-block;border:1.5px solid var(--line);border-radius:999px;padding:4px 12px;margin-top:6px">${HAVE.has(slot) ? '바꾸기' : '그림 넣기'}</span></label></div>`).join('');
+  $('s-loan').value = s.library_loan_days; $('s-class').value = s.class_fixed;
+  CATS.forEach(c => $('s-r-' + c).value = (s.reminders[c] || []).join(', '));
+  $('s-sub').value = s.substitute_rule; $('s-travel').value = s.travel_minutes;
+  $('s-plan').value = s.daily_plan_time; $('s-ds').value = s.day_start; $('s-de').value = s.day_end;
+  $('s-backend').value = s.llm.backend; $('s-ws').value = s.week_start || '일';
+  $('s-fail').value = s.absence_fail_count; $('s-sem').value = s.semester_start || '';
+  loadTitles();
+}
+let TITLES = [];
+async function loadTitles() {
+  const r = await api('/api/titles'); TITLES = r.titles;
+  const opts = (cur, fixed) => `<option value="">자동${fixed ? '' : ' (' + cur + ')'}</option>` +
+    r.categories.map(c => `<option${fixed && c === cur ? ' selected' : ''}>${c}</option>`).join('');
+  $('titles-out').innerHTML = TITLES.length ? '<table><tr><th>제목</th><th>횟수</th><th>종류</th></tr>' + TITLES.map((t, i) =>
+    `<tr><td>${esc(t.shown)}</td><td>${t.count}</td><td><select id="tc-${i}" style="width:auto">${opts(t.category, t.fixed)}</select></td></tr>`).join('') + '</table>'
+    : '<div class="sub">아직 불러온 캘린더가 없어요.</div>';
+}
+async function saveTitles() {
+  const tmap = {...(SETTINGS.title_category || {})};
+  TITLES.forEach((t, i) => { const v = $('tc-' + i).value; if (v) tmap[t.title] = v; else delete tmap[t.title]; });
+  await api('/api/settings', {title_category: tmap});
+  $('t-out').textContent = '저장했어요.'; await status(); loadTitles();
+}
+async function upSticker(slot, input) {
+  const f = input.files[0]; if (!f) return;
+  const r = await fetch('/api/upload_sticker', {method: 'POST', headers: {...H, 'X-Slot': slot}, body: f});
+  if (!r.ok) return alert((await r.json()).error);
+  STK_V++; loadSettings();
+}
+async function saveSettings() {
+  const reminders = {};
+  CATS.forEach(c => reminders[c] = $('s-r-' + c).value.split(',').map(x => parseInt(x)).filter(x => x >= 0));
+  if ($('s-backend').value === 'claude' && !confirm('Claude API를 쓰면 일정 내용이 인터넷(Anthropic)으로 전송돼요. 괜찮나요?')) return;
+  await api('/api/settings', {
+    library_loan_days: +$('s-loan').value, class_fixed: $('s-class').value, reminders,
+    substitute_rule: $('s-sub').value, travel_minutes: +$('s-travel').value,
+    daily_plan_time: $('s-plan').value, day_start: $('s-ds').value, day_end: $('s-de').value,
+    llm: {backend: $('s-backend').value}, week_start: $('s-ws').value,
+    absence_fail_count: +$('s-fail').value || 4, semester_start: $('s-sem').value,
+  });
+  $('s-out').textContent = '저장했어요.'; status();
+}
+$('ics').onchange = async (e) => {
+  for (const f of e.target.files) {
+    const r = await fetch('/api/upload_ics', {method: 'POST', headers: {...H, 'X-Filename': encodeURIComponent(f.name).replace(/%/g, '')}, body: await f.text()});
+    const j = await r.json();
+    $('ics-out').textContent = r.ok ? `불러왔어요: ${j.saved} (일정 ${j.events}개)` : '오류: ' + j.error;
+  }
+  status();
+};
+
+Promise.all([status(), loadStickers()]).then(() => scheduleNoti()).then(() =>
+  addMsg('bot', esc('안녕! 일정 등록, 하루 계획, 할 일 정리, 패턴 분석을 도와줄게.\n무엇이든 말해 줘.')));
+</script>
+</body>
+</html>

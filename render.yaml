@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: schedule-agent-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m schedule_agent.server --public-demo
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "t1",
+    "title": "수업 자료 프린트",
+    "due": "2026-10-15",
+    "importance": 3,
+    "minutes": 30
+  },
+  {
+    "id": "t2",
+    "title": "과제 보고서 초안 쓰기",
+    "due": "2026-10-17",
+    "importance": 3,
+    "minutes": 90
+  },
+  {
+    "id": "t3",
+    "title": "모모 다 읽기",
+    "due": "2026-10-17",
+    "importance": 2,
+    "minutes": 60
+  },
+  {
+    "id": "t4",
+    "title": "다음 주 수업 준비",
+    "due": "2026-10-20",
+    "importance": 2,
+    "minutes": 60
+  },
+  {
+    "id": "t5",
+    "title": "방 청소",
+    "due": null,
+    "importance": 1,
+    "minutes": 40
+  },
+  {
+    "id": "t6",
+    "title": "통신비 확인",
+    "due": "2026-10-25",
+    "importance": 1,
+    "minutes": 15
+  },
+  {
+    "id": "t7",
+    "title": "과제하기",
+    "repeat": "weekly",
+    "weekday": 5,
+    "importance": 3,
+    "minutes": 60,
+    "since": "2026-09-01"
+  }
+]
